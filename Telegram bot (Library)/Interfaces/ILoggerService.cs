@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Telegram_bot__Library_.Interfaces
+﻿namespace Telegram_bot__Library_.Interfaces
 {
     internal interface ILoggerService
     {
