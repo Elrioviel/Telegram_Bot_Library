@@ -17,29 +17,32 @@ namespace Telegram_bot__Library_.Services
             _logger = logger;
         }
 
-        public async Task HandleMessageAsync(Message message, CancellationToken cancellationToken)
+        public Task HandleMessageAsync(Message message, CancellationToken cancellationToken)
         {
             if (message?.Text == null)
-                return;
+                return Task.CompletedTask;
 
-            var chatId = message.Chat.Id;
-            _logger.Debug($"Received message: {message.Text} from {chatId}");
+            return Task.Run(async () =>
+            {
+                var chatId = message.Chat.Id;
+                _logger.Debug($"Received message: {message.Text} from {chatId}");
 
-            if (message.ReplyToMessage != null)
-            {
-                await HandleReplyAsync(chatId, message.ReplyToMessage, message.Text, cancellationToken);
-            }
-            else
-            {
-                await HandleCommandAsync(chatId, message.Text, cancellationToken);
-            }
+                if (message.ReplyToMessage != null)
+                {
+                    await HandleReplyAsync(chatId, message.ReplyToMessage, message.Text, cancellationToken);
+                }
+                else
+                {
+                    await HandleCommandAsync(chatId, message.Text, cancellationToken);
+                }
+            }, cancellationToken);
         }
 
         private async Task HandleCommandAsync(long chatId, string messageText, CancellationToken cancellationToken)
         {
             if (messageText.StartsWith("/start"))
             {
-                await _botClient.SendMessage(chatId, "Welcome! I'm your bot.", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+                var sendWelcomeTask = _botClient.SendMessage(chatId, "Welcome! I'm your bot.", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
 
                 var keyboard = new ReplyKeyboardMarkup(new[]
                 {
@@ -50,7 +53,9 @@ namespace Telegram_bot__Library_.Services
                     ResizeKeyboard = true
                 };
 
-                await _botClient.SendMessage(chatId, "Choose and option:", replyMarkup: keyboard, parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+                var sendKeyboardTask = _botClient.SendMessage(chatId, "Choose and option:", replyMarkup: keyboard, parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+
+                await Task.WhenAll(sendWelcomeTask, sendKeyboardTask);
             }
             else if (messageText == "📋 Options")
             {
