@@ -1,57 +1,62 @@
-﻿using Telegram.Bot;
+﻿using Microsoft.Extensions.Hosting;
+using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram_bot__Library_.Interfaces;
 
 namespace Telegram_bot__Library_.Services
 {
-    internal class BotService : IBotService
+    internal sealed class BotService : IBotService, IHostedService
     {
-        private readonly TelegramBotClient _botClient;
-        private readonly CommandHandler _commandHandler;
+        private readonly ITelegramBotClient _botClient;
+        private readonly ICommandHandler _commandHandler;
+        private readonly ILoggerService _logger;
 
-        public BotService (string botToken)
+        public BotService(string botToken)
         {
-            if (string.IsNullOrEmpty (botToken))
-                throw new ArgumentException("Bot token cannot be null or empty", nameof (botToken));
-
-            _botClient = new TelegramBotClient (botToken);
-            _commandHandler = new CommandHandler(_botClient);
+            _botClient = new TelegramBotClient(botToken);
+            _commandHandler = new CommandHandler(_botClient, _logger);
+            _logger = new LoggerService();
         }
 
-        public async Task StartAsync()
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var me = await _botClient.GetMeAsync();
-            Logger.Info($"Bot started: {me.Username}");
+            var me = await _botClient.GetMe();
+            await _botClient.DeleteWebhook();
+            await _botClient.DropPendingUpdates();
+
+            _logger.Info($"Bot started: {me.Username}");
+
             _botClient.StartReceiving(
-            updateHandler: _commandHandler.HandleUpdateAsync,
-            errorHandler: HandleErrorAsync,
-            receiverOptions: new ReceiverOptions { AllowedUpdates = { } },
-            cancellationToken: CancellationToken.None
-            );
+                updateHandler: _commandHandler.HandleUpdateAsync,
+                errorHandler: HandleErrorAsync,
+                receiverOptions: new ReceiverOptions { AllowedUpdates = { } },
+                cancellationToken: CancellationToken.None
+                );
         }
 
-        public async Task StopAsync()
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _botClient.CloseAsync();
-            Logger.Info("Bot stopped");
+            cancellationToken.ThrowIfCancellationRequested();
+            _logger.Info("Bot stopped");
         }
 
         public async Task SendMessageAsync(long chatId, string message)
         {
-            await _botClient.SendTextMessageAsync(chatId, message, parseMode: Telegram.Bot.Types.Enums.ParseMode.Markdown);
+            await _botClient.SendMessage(chatId, message, parseMode: Telegram.Bot.Types.Enums.ParseMode.Markdown);
         }
 
         public async Task SendPhotoAsync(long chatId, string photoUrl, string caption = "")
         {
-            await _botClient.SendPhotoAsync(chatId, photoUrl, caption: caption);
+            await _botClient.SendPhoto(chatId, photoUrl, caption: caption);
         }
 
         public async Task SendDocumentAsync(long chatId, string filePath, string caption = "")
         {
             await using var fileStream = File.OpenRead(filePath);
-            await _botClient.SendDocumentAsync(chatId, new InputFileStream(fileStream, filePath), caption: caption);
+            await _botClient.SendDocument(chatId, new InputFileStream(fileStream, filePath), caption: caption);
         }
 
         public async Task SendKeyboardAsync(long chatId, string message, IEnumerable<IEnumerable<string>> buttons)
@@ -61,17 +66,17 @@ namespace Telegram_bot__Library_.Services
                 ResizeKeyboard = true
             };
 
-            await _botClient.SendTextMessageAsync(chatId, message, replyMarkup: keyboard);
+            await _botClient.SendMessage(chatId, message, replyMarkup: keyboard, parseMode: ParseMode.Html);
         }
 
         public async Task SendInlineKeyboardAsync(long chatId, string message, InlineKeyboardMarkup inlineKeyBoard)
         {
-            await _botClient.SendTextMessageAsync(chatId, message, replyMarkup: inlineKeyBoard);
+            await _botClient.SendMessage(chatId, message, replyMarkup: inlineKeyBoard, parseMode: ParseMode.Html);
         }
 
         private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
-            Logger.Error($"Error: {exception.Message}");
+            _logger.Error($"Error: {exception.Message}");
             return Task.CompletedTask;
         }
     }

@@ -9,8 +9,8 @@ namespace Telegram_bot__Library_.Interfaces
 {
     internal interface IBotService
     {
-        Task StartAsync();
-        Task StopAsync();
+        Task StartAsync(CancellationToken cancellationToken);
+        Task StopAsync(CancellationToken cancellationToken);
         Task SendMessageAsync(long chatId, string message);
         Task SendPhotoAsync(long chatId, string photoUrl, string caption = "");
         Task SendDocumentAsync(long chatId, string filePath, string caption = "");

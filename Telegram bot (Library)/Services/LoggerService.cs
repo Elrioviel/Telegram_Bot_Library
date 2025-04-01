@@ -1,6 +1,8 @@
-﻿namespace Telegram_bot__Library_.Services
+﻿using Telegram_bot__Library_.Interfaces;
+
+namespace Telegram_bot__Library_.Services
 {
-    internal class Logger
+    internal sealed class LoggerService : ILoggerService
     {
         private static readonly string logFilePath = "bot_logs.txt";
         private static readonly object lockObject = new();
@@ -22,8 +24,8 @@
             }
         }
 
-        public static void Info(string message) => Log(LogLevel.Info, message);
-        public static void Debug(string message) => Log(LogLevel.Debug, message);
-        public static void Error(string message) => Log(LogLevel.Error, message);
+        public void Info(string message) => Log(LogLevel.Info, message);
+        public void Debug(string message) => Log(LogLevel.Debug, message);
+        public void Error(string message) => Log(LogLevel.Error, message);
     }
 }
