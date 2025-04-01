@@ -17,7 +17,7 @@ namespace Telegram_bot__Library_.Services
             _logger = logger;
         }
 
-        public async Task HandleMessageAsync(Message message)
+        public async Task HandleMessageAsync(Message message, CancellationToken cancellationToken)
         {
             if (message?.Text == null)
                 return;
@@ -27,19 +27,19 @@ namespace Telegram_bot__Library_.Services
 
             if (message.ReplyToMessage != null)
             {
-                await HandleReplyAsync(chatId, message.ReplyToMessage, message.Text);
+                await HandleReplyAsync(chatId, message.ReplyToMessage, message.Text, cancellationToken);
             }
             else
             {
-                await HandleCommandAsync(chatId, message.Text);
+                await HandleCommandAsync(chatId, message.Text, cancellationToken);
             }
         }
 
-        private async Task HandleCommandAsync(long chatId, string messageText)
+        private async Task HandleCommandAsync(long chatId, string messageText, CancellationToken cancellationToken)
         {
             if (messageText.StartsWith("/start"))
             {
-                await _botClient.SendMessage(chatId, "Welcome! I'm your bot.", parseMode: ParseMode.Html);
+                await _botClient.SendMessage(chatId, "Welcome! I'm your bot.", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
 
                 var keyboard = new ReplyKeyboardMarkup(new[]
                 {
@@ -50,7 +50,7 @@ namespace Telegram_bot__Library_.Services
                     ResizeKeyboard = true
                 };
 
-                await _botClient.SendMessage(chatId, "Choose and option:", replyMarkup: keyboard, parseMode: ParseMode.Html);
+                await _botClient.SendMessage(chatId, "Choose and option:", replyMarkup: keyboard, parseMode: ParseMode.Html, cancellationToken: cancellationToken);
             }
             else if (messageText == "📋 Options")
             {
@@ -60,21 +60,21 @@ namespace Telegram_bot__Library_.Services
                     new[] { InlineKeyboardButton.WithUrl("Visit Google", "https://google.com") }
                 });
 
-                await _botClient.SendMessage(chatId, "Press a button:", replyMarkup: inlineKeyboard, parseMode: ParseMode.Html);
+                await _botClient.SendMessage(chatId, "Press a button:", replyMarkup: inlineKeyboard, parseMode: ParseMode.Html, cancellationToken: cancellationToken);
             }
             else
             {
-                await _botClient.SendMessage(chatId, "Unknown command", parseMode: ParseMode.Html);
+                await _botClient.SendMessage(chatId, "Unknown command", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
             }
         }
 
-        private async Task HandleReplyAsync(long chatId, Message repliedMessage, string userReply)
+        private async Task HandleReplyAsync(long chatId, Message repliedMessage, string userReply, CancellationToken cancellationToken)
         {
             _logger.Debug($"Bot was replied to: {repliedMessage.Text}, User response: {userReply}");
 
             if (repliedMessage.From?.IsBot == true)
             {
-                await _botClient.SendMessage(chatId, $"You replied to my message with: {userReply}", parseMode: ParseMode.Html);
+                await _botClient.SendMessage(chatId, $"You replied to my message with: {userReply}", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
             }
         }
     }

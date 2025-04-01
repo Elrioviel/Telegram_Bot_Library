@@ -7,28 +7,29 @@ namespace Telegram_bot__Library_.Services
 {
     internal sealed class CommandHandler : ICommandHandler
     {
-        private readonly MessageHandler _messageHandler;
-        private readonly CallbackHandler _callbackHandler;
+        public event Func<Message, CancellationToken, Task> OnMessageReceived;
+        public event Func<CallbackQuery, CancellationToken, Task> OnCallbackQueryReceived;
+
         private readonly ILoggerService _logger;
 
-        public CommandHandler(ITelegramBotClient botClient, ILoggerService logger)
+        public CommandHandler(ILoggerService logger)
         {
             _logger = logger;
-            _messageHandler = new MessageHandler(botClient, _logger);
-            _callbackHandler = new CallbackHandler(botClient);
         }
 
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             try
             {
-                if (update.Type == UpdateType.Message)
+                if (update.Type == UpdateType.Message && update.Message != null)
                 {
-                    await _messageHandler.HandleMessageAsync(update.Message);
+                    if (OnMessageReceived != null)
+                        await OnMessageReceived.Invoke(update.Message, cancellationToken);
                 }
-                else if (update.Type == UpdateType.CallbackQuery)
+                else if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery != null)
                 {
-                    await _callbackHandler.HandleCallbackQueryAsync(update.CallbackQuery);
+                    if (OnCallbackQueryReceived != null)
+                        await OnCallbackQueryReceived.Invoke(update.CallbackQuery, cancellationToken);
                 }
             }
             catch (Exception exception)
