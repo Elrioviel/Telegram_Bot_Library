@@ -13,12 +13,12 @@ namespace Telegram_bot__Library_.Services
             _botClient = botClient;
         }
 
-        public async Task HandleCallbackQueryAsync(CallbackQuery callbackQuery)
+        public async Task HandleCallbackQueryAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
         {
             if (callbackQuery.Data == "button_clicked")
             {
                 await _botClient.AnswerCallbackQuery(callbackQuery.Id, "You clicked the button!");
-                await _botClient.SendMessage(callbackQuery.Message.Chat.Id, "Button was clicked!", parseMode: ParseMode.Html);
+                await _botClient.SendMessage(callbackQuery.Message.Chat.Id, "Button was clicked!", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
             }
         }
     }

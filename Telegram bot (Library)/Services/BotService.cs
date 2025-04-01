@@ -13,12 +13,20 @@ namespace Telegram_bot__Library_.Services
         private readonly ITelegramBotClient _botClient;
         private readonly ICommandHandler _commandHandler;
         private readonly ILoggerService _logger;
+        private readonly MessageHandler _messageHandler;
+        private readonly CallbackHandler _callbackHandler;
 
-        public BotService(string botToken)
+        public BotService(string botToken, ILoggerService logger)
         {
+            _logger = logger;
             _botClient = new TelegramBotClient(botToken);
-            _commandHandler = new CommandHandler(_botClient, _logger);
-            _logger = new LoggerService();
+            _commandHandler = new CommandHandler(_logger);
+            _messageHandler = new MessageHandler(_botClient, _logger);
+            _callbackHandler = new CallbackHandler(_botClient);
+
+            // Подписаться на события.
+            _commandHandler.OnMessageReceived += _messageHandler.HandleMessageAsync;
+            _commandHandler.OnCallbackQueryReceived += _callbackHandler.HandleCallbackQueryAsync;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -33,14 +41,16 @@ namespace Telegram_bot__Library_.Services
                 updateHandler: _commandHandler.HandleUpdateAsync,
                 errorHandler: HandleErrorAsync,
                 receiverOptions: new ReceiverOptions { AllowedUpdates = { } },
-                cancellationToken: CancellationToken.None
+                cancellationToken: cancellationToken
                 );
         }
 
-        public async Task StopAsync(CancellationToken cancellationToken)
+        public Task StopAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             _logger.Info("Bot stopped");
+            
+            return Task.CompletedTask;
         }
 
         public async Task SendMessageAsync(long chatId, string message)
