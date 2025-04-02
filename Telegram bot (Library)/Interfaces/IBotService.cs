@@ -2,6 +2,9 @@
 
 namespace Telegram_bot__Library_.Interfaces
 {
+    /// <summary>
+    /// Интерфейс для управления работой Telegram-бота.
+    /// </summary>
     internal interface IBotService
     {
         Task StartAsync(CancellationToken cancellationToken);

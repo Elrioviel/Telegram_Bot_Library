@@ -4,12 +4,17 @@ using Telegram_bot__Library_.Interfaces;
 
 namespace Telegram_bot__Library_.Services
 {
+    /// <summary>
+    /// Обрабатывает callback-запросы, отправленные пользователями через inline-кнопки.
+    /// </summary>
     internal sealed class CallbackHandler
     {
         private readonly ITelegramBotClient _botClient;
         private readonly ILoggerService _logger;
 
-        // Event that external apps can subscribe to.
+        /// <summary>
+        /// Событие, вызываемое при получении callback-запроса.
+        /// </summary>
         public event Func<CallbackQuery, CancellationToken, Task>? OnCallbackReceived;
 
         public CallbackHandler(ITelegramBotClient botClient, ILoggerService logger)
@@ -18,6 +23,11 @@ namespace Telegram_bot__Library_.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Обрабатывает callback-запрос.
+        /// </summary>
+        /// <param name="callbackQuery">Объект callback-запроса.</param>
+        /// <param name="cancellationToken">Токен отмены операции.</param>
         public async Task HandleCallbackQueryAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
         {
             _logger.Debug($"Callback received: {callbackQuery.Data}");
