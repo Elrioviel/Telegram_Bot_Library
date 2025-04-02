@@ -11,65 +11,64 @@ namespace Telegram_bot__Library_.Services
         private readonly ITelegramBotClient _botClient;
         private readonly ILoggerService _logger;
 
+        // Словарь для хранения команд и их обработчиков.
+        private readonly Dictionary<string, Func<long, string, CancellationToken, Task>> _commands = new();
+        // Словарь для хранения ответов и их обработчиков.
+        private readonly Dictionary<string, Func<long, Message, string, CancellationToken, Task>> _replies = new();
+
+        public event Func<Message, CancellationToken, Task>? OnMessageReceived;
+
         public MessageHandler(ITelegramBotClient botClient, ILoggerService logger)
         {
             _botClient = botClient;
             _logger = logger;
         }
 
-        public Task HandleMessageAsync(Message message, CancellationToken cancellationToken)
+        public void RegisterCommand(string command, Func<long, string, CancellationToken, Task> handler)
+        {
+            _commands[command] = handler;
+            _logger.Info($"Registred command: {command}");
+        }
+
+        public void RegisterReply(string originalMessage, Func<long, Message, string, CancellationToken, Task> handler)
+        {
+            _replies[originalMessage] = handler;
+            _logger.Info($"Registred reply handler for: {originalMessage}");
+        }
+
+        public async Task HandleMessageAsync(Message message, CancellationToken cancellationToken)
         {
             if (message?.Text == null)
-                return Task.CompletedTask;
+                return;
 
-            return Task.Run(async () =>
+            _logger.Debug($"Received message: {message.Text} from {message.Chat.Id}");
+
+            // Вызывам событие перед обработкой.
+            if (OnMessageReceived != null)
+                await OnMessageReceived.Invoke(message, cancellationToken);
+
+            if (message.ReplyToMessage != null)
             {
-                var chatId = message.Chat.Id;
-                _logger.Debug($"Received message: {message.Text} from {chatId}");
-
-                if (message.ReplyToMessage != null)
-                {
-                    await HandleReplyAsync(chatId, message.ReplyToMessage, message.Text, cancellationToken);
-                }
-                else
-                {
-                    await HandleCommandAsync(chatId, message.Text, cancellationToken);
-                }
-            }, cancellationToken);
+                await HandleReplyAsync(message.Chat.Id, message.ReplyToMessage, message.Text, cancellationToken);
+            }
+            else
+            {
+                await HandleCommandAsync(message.Chat.Id, message.Text, cancellationToken);
+            }
         }
 
         private async Task HandleCommandAsync(long chatId, string messageText, CancellationToken cancellationToken)
         {
-            if (messageText.StartsWith("/start"))
+            // Берем только саму команду, без аргументов.
+            string command = messageText.Split(' ')[0];
+
+            if (_commands.TryGetValue(command, out var handler))
             {
-                var sendWelcomeTask = _botClient.SendMessage(chatId, "Welcome! I'm your bot.", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
-
-                var keyboard = new ReplyKeyboardMarkup(new[]
-                {
-                    new[] {new KeyboardButton("📋 Options"), new KeyboardButton("❓ Help") },
-                    new[] {new KeyboardButton("❌ Cancel") }
-                })
-                {
-                    ResizeKeyboard = true
-                };
-
-                var sendKeyboardTask = _botClient.SendMessage(chatId, "Choose and option:", replyMarkup: keyboard, parseMode: ParseMode.Html, cancellationToken: cancellationToken);
-
-                await Task.WhenAll(sendWelcomeTask, sendKeyboardTask);
-            }
-            else if (messageText == "📋 Options")
-            {
-                var inlineKeyboard = new InlineKeyboardMarkup(new[]
-                {
-                    new[] { InlineKeyboardButton.WithCallbackData("Click me!", "button_clicked") },
-                    new[] { InlineKeyboardButton.WithUrl("Visit Google", "https://google.com") }
-                });
-
-                await _botClient.SendMessage(chatId, "Press a button:", replyMarkup: inlineKeyboard, parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+                await handler.Invoke(chatId, messageText, cancellationToken);
             }
             else
             {
-                await _botClient.SendMessage(chatId, "Unknown command", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+                await _botClient.SendMessage(chatId, "Unknown command.", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
             }
         }
 
@@ -79,7 +78,14 @@ namespace Telegram_bot__Library_.Services
 
             if (repliedMessage.From?.IsBot == true)
             {
-                await _botClient.SendMessage(chatId, $"You replied to my message with: {userReply}", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+                if (_replies.TryGetValue(repliedMessage.Text ?? "", out var handler))
+                {
+                    await handler.Invoke(chatId, repliedMessage, userReply, cancellationToken);
+                }
+                else
+                {
+                    await _botClient.SendMessage(chatId, $"No handler registred for {userReply}", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+                }
             }
         }
     }

@@ -20,13 +20,9 @@ namespace Telegram_bot__Library_.Services
         {
             _logger = logger;
             _botClient = new TelegramBotClient(botToken);
-            _commandHandler = new CommandHandler(_logger);
+            _commandHandler = new CommandHandler(_logger, _callbackHandler, _messageHandler);
             _messageHandler = new MessageHandler(_botClient, _logger);
             _callbackHandler = new CallbackHandler(_botClient);
-
-            // Подписаться на события.
-            _commandHandler.OnMessageReceived += _messageHandler.HandleMessageAsync;
-            _commandHandler.OnCallbackQueryReceived += _callbackHandler.HandleCallbackQueryAsync;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
