@@ -6,7 +6,8 @@ namespace Telegram_bot__Library_.Services
 {
     internal sealed class LoggerService : ILoggerService
     {
-        private static readonly string logFilePath = "bot_logs.txt";
+        private static readonly string logDirectory = "Logs";
+        private static readonly string logFilePath = Path.Combine(logDirectory, "bot_logs.txt");
         private static readonly ConcurrentQueue<string> logQueue = new();
         private static readonly SemaphoreSlim semaphore = new(1, 1);
 
@@ -15,6 +16,15 @@ namespace Telegram_bot__Library_.Services
             Info,
             Debug,
             Error
+        }
+
+        public LoggerService()
+        {
+            // Создаём папку Logs, если её нет
+            if (!Directory.Exists(logDirectory))
+            {
+                Directory.CreateDirectory(logDirectory);
+            }
         }
 
         public void Info(string message) => Log(LogLevel.Info, message);
@@ -26,7 +36,8 @@ namespace Telegram_bot__Library_.Services
             string logMessage = $"{DateTime.Now} [{level}] {message}";
             logQueue.Enqueue(logMessage);
 
-            Task.Run(async () => await WriteLogsToFileAsync());
+            // Запускаем в фоне, но при этом игнорируем возможные ошибки логирования.
+            _ = Task.Run(WriteLogsToFileAsync).ConfigureAwait(false);
         }
 
         private async Task WriteLogsToFileAsync()

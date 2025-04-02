@@ -33,7 +33,7 @@ namespace Telegram_bot__Library_.Services
             }
             catch (Exception exception)
             {
-                _logger.Error($"Error: {exception.Message}");
+                _logger.Error($"Error: {exception}"); // Сохранить весь Exception чтобы не терять StackTrace.
             }
         }
     }

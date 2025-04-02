@@ -1,7 +1,6 @@
 ﻿using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.ReplyMarkups;
 using Telegram_bot__Library_.Interfaces;
 
 namespace Telegram_bot__Library_.Services
@@ -44,8 +43,12 @@ namespace Telegram_bot__Library_.Services
             _logger.Debug($"Received message: {message.Text} from {message.Chat.Id}");
 
             // Вызывам событие перед обработкой.
-            if (OnMessageReceived != null)
-                await OnMessageReceived.Invoke(message, cancellationToken);
+
+            // Перед вызовом сохранить обработчик в локальную переменную чтобы избежать NullReferenceException
+            // если кто-то отпишется во время выполнения.
+            var handler = OnMessageReceived;
+            if (handler != null)
+                await handler.Invoke(message, cancellationToken);
 
             if (message.ReplyToMessage != null)
             {
@@ -64,7 +67,15 @@ namespace Telegram_bot__Library_.Services
 
             if (_commands.TryGetValue(command, out var handler))
             {
-                await handler.Invoke(chatId, messageText, cancellationToken);
+                try
+                {
+                    await handler.Invoke(chatId, messageText, cancellationToken);
+                }
+                catch (Exception exception)
+                {
+                    _logger.Error($"Error executing command {command}: {exception}");
+                    await _botClient.SendMessage(chatId, "An error occurred while processing the command.");
+                }
             }
             else
             {
@@ -81,6 +92,10 @@ namespace Telegram_bot__Library_.Services
                 if (_replies.TryGetValue(repliedMessage.Text ?? "", out var handler))
                 {
                     await handler.Invoke(chatId, repliedMessage, userReply, cancellationToken);
+                }
+                else if (userReply.StartsWith('/')) // В случае если пользователь ответит на сообщение бота с командой.
+                {
+                    await HandleCommandAsync(chatId, userReply, cancellationToken);
                 }
                 else
                 {
