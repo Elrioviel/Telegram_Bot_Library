@@ -20,9 +20,9 @@ namespace Telegram_bot__Library_.Services
         {
             _logger = logger;
             _botClient = new TelegramBotClient(botToken);
-            _commandHandler = new CommandHandler(_logger, _callbackHandler, _messageHandler);
             _messageHandler = new MessageHandler(_botClient, _logger);
-            _callbackHandler = new CallbackHandler(_botClient);
+            _callbackHandler = new CallbackHandler(_botClient, _logger);
+            _commandHandler = new CommandHandler(_logger, _callbackHandler, _messageHandler);
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -51,7 +51,7 @@ namespace Telegram_bot__Library_.Services
 
         public async Task SendMessageAsync(long chatId, string message)
         {
-            await _botClient.SendMessage(chatId, message, parseMode: Telegram.Bot.Types.Enums.ParseMode.Markdown);
+            await _botClient.SendMessage(chatId, message, parseMode: ParseMode.MarkdownV2);
         }
 
         public async Task SendPhotoAsync(long chatId, string photoUrl, string caption = "")
@@ -82,7 +82,7 @@ namespace Telegram_bot__Library_.Services
 
         private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
-            _logger.Error($"Error: {exception.Message}");
+            _logger.Error($"Error: {exception}");
             return Task.CompletedTask;
         }
     }
