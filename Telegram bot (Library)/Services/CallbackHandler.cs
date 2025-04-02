@@ -8,6 +8,9 @@ namespace Telegram_bot__Library_.Services
     {
         private readonly ITelegramBotClient _botClient;
 
+        // Event that external apps can subscribe to.
+        public event Func<CallbackQuery, CancellationToken, Task>? OnCallbackReceived;
+
         public CallbackHandler(ITelegramBotClient botClient)
         {
             _botClient = botClient;
@@ -15,10 +18,15 @@ namespace Telegram_bot__Library_.Services
 
         public async Task HandleCallbackQueryAsync(CallbackQuery callbackQuery, CancellationToken cancellationToken)
         {
-            if (callbackQuery.Data == "button_clicked")
+            if (OnCallbackReceived != null)
             {
-                await _botClient.AnswerCallbackQuery(callbackQuery.Id, "You clicked the button!");
-                await _botClient.SendMessage(callbackQuery.Message.Chat.Id, "Button was clicked!", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+                // Invoke the external event handler if it's subscribed.
+                await OnCallbackReceived.Invoke(callbackQuery, cancellationToken);
+            }
+            else
+            {
+                // Default behavior.
+                await _botClient.AnswerCallbackQuery(callbackQuery.Id, "No handler registred.");
             }
         }
     }
