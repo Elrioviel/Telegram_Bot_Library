@@ -5,6 +5,10 @@ using Telegram_bot__Library_.Interfaces;
 
 namespace Telegram_bot__Library_.Services
 {
+    /// <summary>
+    /// Обрабатывает входящие сообщения в Telegram боте.
+    /// Поддерживает регистрацию команд и ответов.
+    /// </summary>
     internal sealed class MessageHandler
     {
         private readonly ITelegramBotClient _botClient;
@@ -12,9 +16,13 @@ namespace Telegram_bot__Library_.Services
 
         // Словарь для хранения команд и их обработчиков.
         private readonly Dictionary<string, Func<long, string, CancellationToken, Task>> _commands = new();
+
         // Словарь для хранения ответов и их обработчиков.
         private readonly Dictionary<string, Func<long, Message, string, CancellationToken, Task>> _replies = new();
 
+        /// <summary>
+        /// Событие которое вызывается при получении нового сообщения.
+        /// </summary>
         public event Func<Message, CancellationToken, Task>? OnMessageReceived;
 
         public MessageHandler(ITelegramBotClient botClient, ILoggerService logger)
@@ -23,18 +31,31 @@ namespace Telegram_bot__Library_.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Регистрирует команду и её обработчик.
+        /// </summary>
+        /// <param name="command">Название команды.</param>
+        /// <param name="handler">Метод-обработчик команды.</param>
         public void RegisterCommand(string command, Func<long, string, CancellationToken, Task> handler)
         {
             _commands[command] = handler;
             _logger.Info($"Registred command: {command}");
         }
 
+        /// <summary>
+        /// Регистрирует ответ и его обработчик.
+        /// </summary>
+        /// <param name="originalMessage">Оригинальное сообщение на которое ожидается ответ.</param>
+        /// <param name="handler">Метод-обработчик ответа.</param>
         public void RegisterReply(string originalMessage, Func<long, Message, string, CancellationToken, Task> handler)
         {
             _replies[originalMessage] = handler;
             _logger.Info($"Registred reply handler for: {originalMessage}");
         }
 
+        /// <summary>
+        /// Обрабатывает входящее сообщение от пользователя.
+        /// </summary>
         public async Task HandleMessageAsync(Message message, CancellationToken cancellationToken)
         {
             if (message?.Text == null)
@@ -60,6 +81,9 @@ namespace Telegram_bot__Library_.Services
             }
         }
 
+        /// <summary>
+        /// Обрабатывает команду от пользователя.
+        /// </summary>
         private async Task HandleCommandAsync(long chatId, string messageText, CancellationToken cancellationToken)
         {
             // Берем только саму команду, без аргументов.
@@ -83,6 +107,9 @@ namespace Telegram_bot__Library_.Services
             }
         }
 
+        /// <summary>
+        /// Обрабатывает ответ на сообщение бота.
+        /// </summary>
         private async Task HandleReplyAsync(long chatId, Message repliedMessage, string userReply, CancellationToken cancellationToken)
         {
             _logger.Debug($"Bot was replied to: {repliedMessage.Text}, User response: {userReply}");

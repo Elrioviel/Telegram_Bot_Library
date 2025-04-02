@@ -4,6 +4,9 @@ using Telegram_bot__Library_.Interfaces;
 
 namespace Telegram_bot__Library_.Services
 {
+    /// <summary>
+    /// Сервис для логирования сообщений бота в файл.
+    /// </summary>
     internal sealed class LoggerService : ILoggerService
     {
         private static readonly string logDirectory = "Logs";
@@ -31,6 +34,9 @@ namespace Telegram_bot__Library_.Services
         public void Debug(string message) => Log(LogLevel.Debug, message);
         public void Error(string message) => Log(LogLevel.Error, message);
 
+        /// <summary>
+        /// Записывает лог-сообщение в очередь.
+        /// </summary>
         private void Log(LogLevel level, string message)
         {
             string logMessage = $"{DateTime.Now} [{level}] {message}";
@@ -40,6 +46,9 @@ namespace Telegram_bot__Library_.Services
             _ = Task.Run(WriteLogsToFileAsync).ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// Асинхронно записывает накопленные логи в файл.
+        /// </summary>
         private async Task WriteLogsToFileAsync()
         {
             if (!logQueue.IsEmpty)

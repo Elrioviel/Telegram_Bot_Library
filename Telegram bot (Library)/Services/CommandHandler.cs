@@ -5,6 +5,9 @@ using Telegram_bot__Library_.Interfaces;
 
 namespace Telegram_bot__Library_.Services
 {
+    /// <summary>
+    /// Обработчик входящих сообщений и callback-запросов.
+    /// </summary>
     internal sealed class CommandHandler : ICommandHandler
     {
         private readonly ILoggerService _logger;
@@ -18,6 +21,12 @@ namespace Telegram_bot__Library_.Services
             _messageHandler = messageHandler;
         }
 
+        /// <summary>
+        /// Обрабатывает входящее обновление (сообщение или callback-запрос)
+        /// </summary>
+        /// <param name="botClient">Экземпляр Telegram-бота.</param>
+        /// <param name="update">Объект обновления.</param>
+        /// <param name="cancellationToken">Токен отмены операции.</param>
         public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             try
