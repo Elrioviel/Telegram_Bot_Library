@@ -9,7 +9,7 @@ namespace Telegram_bot__Library_.Services
     /// Обрабатывает входящие сообщения в Telegram боте.
     /// Поддерживает регистрацию команд и ответов.
     /// </summary>
-    internal sealed class MessageHandler
+    internal sealed class MessageHandler : IMessageHandler
     {
         private readonly ITelegramBotClient _botClient;
         private readonly ILoggerService _logger;

@@ -7,7 +7,7 @@ namespace Telegram_bot__Library_.Services
     /// <summary>
     /// Обрабатывает callback-запросы, отправленные пользователями через inline-кнопки.
     /// </summary>
-    internal sealed class CallbackHandler
+    internal sealed class CallbackHandler : ICallbackHandler
     {
         private readonly ITelegramBotClient _botClient;
         private readonly ILoggerService _logger;

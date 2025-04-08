@@ -11,10 +11,10 @@ namespace Telegram_bot__Library_.Services
     internal sealed class CommandHandler : ICommandHandler
     {
         private readonly ILoggerService _logger;
-        private readonly CallbackHandler _callbackHandler;
-        private readonly MessageHandler _messageHandler;
+        private readonly ICallbackHandler _callbackHandler;
+        private readonly IMessageHandler _messageHandler;
 
-        public CommandHandler(ILoggerService logger, CallbackHandler callbackHandler, MessageHandler messageHandler)
+        public CommandHandler(ILoggerService logger, ICallbackHandler callbackHandler, IMessageHandler messageHandler)
         {
             _logger = logger;
             _callbackHandler = callbackHandler;
