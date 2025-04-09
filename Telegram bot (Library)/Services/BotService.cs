@@ -67,6 +67,8 @@ namespace Telegram_bot__Library_.Services
         /// <param name="message">Текст сообщения.</param>
         public async Task SendMessageAsync(long chatId, string message)
         {
+            _logger.Info($"Sending message to chat {chatId}: {message}");
+
             await _botClient.SendMessage(chatId, message, parseMode: ParseMode.MarkdownV2);
         }
 
@@ -78,6 +80,8 @@ namespace Telegram_bot__Library_.Services
         /// <param name="caption">Описание изображения.</param>
         public async Task SendPhotoAsync(long chatId, string photoUrl, string caption = "")
         {
+            _logger.Info($"Sending photo to chat {chatId}");
+
             await _botClient.SendPhoto(chatId, photoUrl, caption: caption);
         }
 
@@ -89,6 +93,8 @@ namespace Telegram_bot__Library_.Services
         /// <param name="caption">Описание файла.</param>
         public async Task SendDocumentAsync(long chatId, string filePath, string caption = "")
         {
+            _logger.Info($"Sending document to chat {chatId}");
+
             await using var fileStream = File.OpenRead(filePath);
             await _botClient.SendDocument(chatId, new InputFileStream(fileStream, filePath), caption: caption);
         }
@@ -101,6 +107,8 @@ namespace Telegram_bot__Library_.Services
         /// <param name="buttons">Кнопки клавиатуры.</param>
         public async Task SendKeyboardAsync(long chatId, string message, IEnumerable<IEnumerable<string>> buttons)
         {
+            _logger.Info($"Sending keyboard reply to chat {chatId}");
+
             var keyboard = new ReplyKeyboardMarkup(buttons.Select(row => row.Select(text => new KeyboardButton(text))))
             {
                 ResizeKeyboard = true
@@ -117,13 +125,15 @@ namespace Telegram_bot__Library_.Services
         /// <param name="inlineKeyBoard">Inline-клавиатура.</param>
         public async Task SendInlineKeyboardAsync(long chatId, string message, InlineKeyboardMarkup inlineKeyBoard)
         {
+            _logger.Info($"Sending inline keyboard reply to chat {chatId}");
+
             await _botClient.SendMessage(chatId, message, replyMarkup: inlineKeyBoard, parseMode: ParseMode.Html);
         }
 
         /// <summary>
         /// Обрабатывает ошибки, возникающие в работе бота.
         /// </summary>
-        private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+        internal Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
             _logger.Error($"Error: {exception}");
             return Task.CompletedTask;

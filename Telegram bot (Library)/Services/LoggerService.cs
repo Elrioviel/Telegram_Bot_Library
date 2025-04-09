@@ -9,10 +9,10 @@ namespace Telegram_bot__Library_.Services
     /// </summary>
     internal sealed class LoggerService : ILoggerService
     {
-        private static readonly string logDirectory = "Logs";
-        private static readonly string logFilePath = Path.Combine(logDirectory, "bot_logs.txt");
-        private static readonly ConcurrentQueue<string> logQueue = new();
-        private static readonly SemaphoreSlim semaphore = new(1, 1);
+        private static readonly string _logDirectory = "Logs";
+        private static readonly string _logFilePath = Path.Combine(_logDirectory, "bot_logs.txt");
+        private static readonly ConcurrentQueue<string> _logQueue = new();
+        private static readonly SemaphoreSlim _semaphore = new(1, 1);
 
         private enum LogLevel
         {
@@ -24,9 +24,9 @@ namespace Telegram_bot__Library_.Services
         public LoggerService()
         {
             // Создаём папку Logs, если её нет
-            if (!Directory.Exists(logDirectory))
+            if (!Directory.Exists(_logDirectory))
             {
-                Directory.CreateDirectory(logDirectory);
+                Directory.CreateDirectory(_logDirectory);
             }
         }
 
@@ -40,7 +40,7 @@ namespace Telegram_bot__Library_.Services
         private void Log(LogLevel level, string message)
         {
             string logMessage = $"{DateTime.Now} [{level}] {message}";
-            logQueue.Enqueue(logMessage);
+            _logQueue.Enqueue(logMessage);
 
             // Запускаем в фоне, но при этом игнорируем возможные ошибки логирования.
             _ = Task.Run(WriteLogsToFileAsync).ConfigureAwait(false);
@@ -51,23 +51,23 @@ namespace Telegram_bot__Library_.Services
         /// </summary>
         private async Task WriteLogsToFileAsync()
         {
-            if (!logQueue.IsEmpty)
+            if (!_logQueue.IsEmpty)
             {
-                await semaphore.WaitAsync();
+                await _semaphore.WaitAsync();
                 try
                 {
                     StringBuilder sb = new();
 
-                    while (logQueue.TryDequeue(out var log))
+                    while (_logQueue.TryDequeue(out var log))
                     {
                         sb.AppendLine(log);
                     }
 
-                    await File.AppendAllTextAsync(logFilePath, sb.ToString());
+                    await File.AppendAllTextAsync(_logFilePath, sb.ToString());
                 }
                 finally
                 {
-                    semaphore.Release();
+                    _semaphore.Release();
                 }
             }
         }

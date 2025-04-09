@@ -13,6 +13,7 @@
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="TelegramBotLibrary.Tests" />
+		<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
 	</ItemGroup>
 
 </Project>
