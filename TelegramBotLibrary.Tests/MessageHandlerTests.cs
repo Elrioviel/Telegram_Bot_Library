@@ -1,4 +1,6 @@
-﻿using Moq;
+﻿using AutoFixture.AutoMoq;
+using AutoFixture;
+using Moq;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram_bot__Library_.Interfaces;
@@ -8,15 +10,26 @@ namespace TelegramBotLibrary.Tests
 {
     public class MessageHandlerTests
     {
+        // Моки для зависимостей
         private readonly Mock<ITelegramBotClient> _botMock;
         private readonly Mock<ILoggerService> _loggerMock;
+
         private readonly MessageHandler _messageHandler;
-        private readonly long _chatId = 123L ;
+
+        // Общие данные для тестов
+        private readonly long _chatId = 123L;
+        private readonly CancellationToken _token = CancellationToken.None;
 
         public MessageHandlerTests()
         {
-            _botMock = new Mock<ITelegramBotClient>();
-            _loggerMock = new Mock<ILoggerService>();
+            // AutoFixture автоматически создает и настраивает моки
+            var fixture = new Fixture().Customize(new AutoMoqCustomization());
+
+            // "Замораживаем" моки, чтобы они переиспользовались
+            _botMock = fixture.Freeze<Mock<ITelegramBotClient>>();
+            _loggerMock = fixture.Freeze<Mock<ILoggerService>>();
+
+            // Создаём экземпляр MessageHandler с подделанными зависимостями
             _messageHandler = new MessageHandler(_botMock.Object, _loggerMock.Object);
 
         }
@@ -27,62 +40,73 @@ namespace TelegramBotLibrary.Tests
             // Arrage
             var message = new Message { Text = "Hello", Chat = new Chat { Id = _chatId } };
             var wasCalled = false;
-            _messageHandler.OnMessageReceived += (msg, token) =>
+
+            // Подписываемся на событие OnMessageReceived
+            _messageHandler.OnMessageReceived += (_, _) =>
             {
                 wasCalled = true;
                 return Task.CompletedTask;
             };
 
             // Act
-            await _messageHandler.HandleMessageAsync(message, CancellationToken.None);
+            await _messageHandler.HandleMessageAsync(message, _token);
 
             // Assert
-            Assert.True(wasCalled);
+            Assert.True(wasCalled, "Expected OnMessageReceived handler to be called.");
         }
 
         [Fact]
         public async Task HandleMessageAsync_ShouldProcessKnownCommand()
         {
             // Arrange
-            var commandText = "/start";
-            var message = new Message { Text = commandText, Chat = new Chat { Id = _chatId } };
+            var command = "/start";
+            var message = new Message { Text = command, Chat = new Chat { Id = _chatId } };
 
+            // Флаг для проверки вызова обработчика команды
             var handlerCalled = false;
-            _messageHandler.RegisterCommand(commandText, (id, text, token) =>
+            
+            _messageHandler.RegisterCommand(command, (_, _, _) =>
             {
                 handlerCalled = true;
                 return Task.CompletedTask;
             });
 
             // Act
-            await _messageHandler.HandleMessageAsync(message, CancellationToken.None);
+            await _messageHandler.HandleMessageAsync(message, _token);
 
             // Assert
-            Assert.True(handlerCalled);
+            Assert.True(handlerCalled, $"Expected command handler for '{command}' to be called.");
         }
 
         [Fact]
         public async Task HandleMessageAsync_ShouldProcessReply()
         {
             // Arrange
-            var originalText = "Введите email:";
+            var promptText = "Введите email:";
             var replyText = "test@example.com";
 
-            var botMessage = new Message { Text = originalText, From = new User { IsBot = true } };
-            var userReply = new Message { Text = replyText, Chat = new Chat { Id = _chatId }, ReplyToMessage = botMessage };
+            var botMessage = new Message { Text = promptText, From = new User { IsBot = true } };
+            var userReply = new Message 
+            { 
+                Text = replyText, 
+                Chat = new Chat { Id = _chatId }, 
+                ReplyToMessage = botMessage 
+            };
 
+            // Флаг для проверки, был ли вызван обработчик ответа
             var wasHandlerCalled = false;
-            _messageHandler.RegisterReply(originalText, (id, msg, userInput, token) =>
+
+            _messageHandler.RegisterReply(promptText, (_, _, _, _) =>
             {
                 wasHandlerCalled = true;
                 return Task.CompletedTask;
             });
 
             // Act
-            await _messageHandler.HandleMessageAsync(userReply, CancellationToken.None);
+            await _messageHandler.HandleMessageAsync(userReply, _token);
 
             // Assert
-            Assert.True(wasHandlerCalled);
+            Assert.True(wasHandlerCalled, $"Expected reply handler for '{promptText}' to be called.");
         }
     }
 }
