@@ -4,24 +4,23 @@ namespace TelegramBotLibrary.Tests
 {
     public class LoggerServiceTests : IDisposable
     {
+        private readonly LoggerService _logger = new();
         private readonly string _logFilePath = Path.Combine("Logs", "bot_logs.txt");
 
-        // Arrange
+        // Префиксы, по которым будем проверять записи в логах
+        private readonly string _infoPrefix = "[Info]";
+        private readonly string _debugPrefix = "[Debug]";
+        private readonly string _errorPrefix = "[Error]";
+
+        // Примерные сообщения для логирования
         private readonly string _infoMessage = "Info message.";
         private readonly string _debugMessage = "Debug message.";
         private readonly string _errorMessage = "Something went wrong.";
-        private readonly string _info = "[Info]";
-        private readonly string _debug = "[Debug]";
-        private readonly string _error = "[Error]";
-
-        private LoggerService _logger;
 
         public LoggerServiceTests()
         {
             if (File.Exists(_logFilePath))
                 File.Delete(_logFilePath);
-
-            _logger = new LoggerService();
         }
 
         [Fact]
@@ -29,11 +28,11 @@ namespace TelegramBotLibrary.Tests
         {
             // Act
             _logger.Info(_infoMessage);
-            await Task.Delay(300);
+            await FlushAndWait(); // даем логгеру время записать данные
 
             // Assert
             string content = File.ReadAllText(_logFilePath);
-            Assert.Contains(_info, content);
+            Assert.Contains(_infoPrefix, content);
             Assert.Contains(_infoMessage, content);
         }
 
@@ -42,11 +41,11 @@ namespace TelegramBotLibrary.Tests
         {
             // Act
             _logger.Debug(_debugMessage);
-            await Task.Delay(300);
+            await FlushAndWait();
 
             // Assert
             string content = File.ReadAllText(_logFilePath);
-            Assert.Contains(_debug, content);
+            Assert.Contains(_debugPrefix, content);
             Assert.Contains(_debugMessage, content);
         }
 
@@ -55,11 +54,11 @@ namespace TelegramBotLibrary.Tests
         {
             // Act
             _logger.Error(_errorMessage);
-            await Task.Delay(300);
+            await FlushAndWait();
 
             // Assert
             string content = File.ReadAllText(_logFilePath);
-            Assert.Contains(_error, content);
+            Assert.Contains(_errorPrefix, content);
             Assert.Contains(_errorMessage, content);
         }
 
@@ -71,17 +70,19 @@ namespace TelegramBotLibrary.Tests
             _logger.Debug(_debugMessage);
             _logger.Error(_errorMessage);
 
-            await Task.Delay(600);
+            await FlushAndWait();
 
             // Assert
             string content = File.ReadAllText(_logFilePath);
-            Assert.Contains(_info, content);
+            Assert.Contains(_infoPrefix, content);
             Assert.Contains(_infoMessage, content);
-            Assert.Contains(_debug, content);
+            Assert.Contains(_debugPrefix, content);
             Assert.Contains(_debugMessage, content);
-            Assert.Contains(_error, content);
+            Assert.Contains(_errorPrefix, content);
             Assert.Contains(_errorMessage, content);
         }
+
+        private static Task FlushAndWait() => Task.Delay(300);
 
         public void Dispose()
         {

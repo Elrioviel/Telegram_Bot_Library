@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using AutoFixture;
+using AutoFixture.AutoMoq;
 using Moq;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
 using Telegram_bot__Library_.Interfaces;
 using Telegram_bot__Library_.Services;
 
@@ -14,20 +10,29 @@ namespace TelegramBotLibrary.Tests
 {
     public class CommandHandlerTests
     {
-        private readonly Mock<ILoggerService> _loggerMock;
-        private readonly Mock<ICallbackHandler> _callbackHandlerMock;
-        private readonly Mock<IMessageHandler> _messageHandlerMock;
-        private readonly Mock<ITelegramBotClient> _botClientMock;
-
         private readonly CommandHandler _commandHandler;
+
+        // Моки (заглушки) для зависимостей
+        private readonly Mock<ILoggerService> _loggerMock = new();
+        private readonly Mock<ICallbackHandler> _callbackHandlerMock = new();
+        private readonly Mock<IMessageHandler> _messageHandlerMock = new();
+        private readonly Mock<ITelegramBotClient> _botClientMock = new();
+
+        // Токен отмены
+        private readonly CancellationToken _token = CancellationToken.None;
 
         public CommandHandlerTests()
         {
-            _loggerMock = new Mock<ILoggerService>();
-            _callbackHandlerMock = new Mock<ICallbackHandler>();
-            _messageHandlerMock = new Mock<IMessageHandler>();
-            _botClientMock = new Mock<ITelegramBotClient>();
+            // AutoFixture с AutoMoq позволяет автоматически создавать моки
+            var fixture = new Fixture().Customize(new AutoMoqCustomization());
 
+            // "Замораживаем" зависимости, чтобы они использовались единообразно везде
+            _loggerMock = fixture.Freeze<Mock<ILoggerService>>();
+            _callbackHandlerMock = fixture.Freeze<Mock<ICallbackHandler>>();
+            _messageHandlerMock = fixture.Freeze<Mock<IMessageHandler>>();
+            _botClientMock = fixture.Freeze<Mock<ITelegramBotClient>>();
+
+            // Создаём экземпляр CommandHandler с подставленными зависимостями
             _commandHandler = new CommandHandler(
                 _loggerMock.Object,
                 _callbackHandlerMock.Object,
@@ -39,14 +44,15 @@ namespace TelegramBotLibrary.Tests
         {
             // Arrange
             var message = new Message { Text = "Hello" };
-
             var update = new Update { Message = message };
 
             // Act
-            await _commandHandler.HandleUpdateAsync(_botClientMock.Object, update, CancellationToken.None);
+            await _commandHandler.HandleUpdateAsync(_botClientMock.Object, update, _token);
 
             // Assert
-            _messageHandlerMock.Verify(m => m.HandleMessageAsync(message, It.IsAny<CancellationToken>()), Times.Once());
+            _messageHandlerMock.Verify(m => 
+                m.HandleMessageAsync(message, _token),
+                Times.Once());
         }
 
         [Fact]
@@ -57,10 +63,12 @@ namespace TelegramBotLibrary.Tests
             var update = new Update { CallbackQuery = callback };
 
             // Act
-            await _commandHandler.HandleUpdateAsync(_botClientMock.Object, update, CancellationToken.None);
+            await _commandHandler.HandleUpdateAsync(_botClientMock.Object, update, _token);
 
             // Assert
-            _callbackHandlerMock.Verify(c => c.HandleCallbackQueryAsync(callback, It.IsAny<CancellationToken>()), Times.Once());
+            _callbackHandlerMock.Verify(c =>
+                c.HandleCallbackQueryAsync(callback, _token),
+                Times.Once());
         }
 
         [Fact]
@@ -70,7 +78,7 @@ namespace TelegramBotLibrary.Tests
             var update = new Update {};
 
             // Act
-            await _commandHandler.HandleUpdateAsync(_botClientMock.Object, update, CancellationToken.None);
+            await _commandHandler.HandleUpdateAsync(_botClientMock.Object, update, _token);
 
             // Assert
             _callbackHandlerMock.VerifyNoOtherCalls();
@@ -82,18 +90,19 @@ namespace TelegramBotLibrary.Tests
         public async Task HandleUpdateAsync_WhenExceptionThrown_LogsError()
         {
             // Arrange
-            var message = new Message { Text = "test" };
-            var update = new Update { Message = message };
+            var update = new Update { Message = new Message { Text = "test" } };
 
             _messageHandlerMock
-                .Setup(m => m.HandleMessageAsync(It.IsAny<Message>(), It.IsAny<CancellationToken>()))
+                .Setup(m => m.HandleMessageAsync(It.IsAny<Message>(), _token))
                 .ThrowsAsync(new InvalidOperationException("Test exception"));
 
             // Act
-            await _commandHandler.HandleUpdateAsync(_botClientMock.Object, update, CancellationToken.None);
+            await _commandHandler.HandleUpdateAsync(_botClientMock.Object, update, _token);
 
             // Assert
-            _loggerMock.Verify(l => l.Error(It.Is<string>(s => s.Contains("Test exception"))), Times.Once);
+            _loggerMock.Verify(l =>
+                l.Error(It.Is<string>(s => s.Contains("Test exception"))),
+                Times.Once);
         }
     }
 }
