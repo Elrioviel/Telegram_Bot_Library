@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UserSecretsId>dotnet-TelegramBotWindowsService-a84a096b-f730-4f13-bdc7-b89e2a929a8a</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="Telegram bot %28Library%29">
+		  <HintPath>Libs\Telegram bot (Library).dll</HintPath>
+		</Reference>
+	</ItemGroup>
+</Project>

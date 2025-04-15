@@ -3,7 +3,7 @@
     /// <summary>
     /// Интерфейс для логирования сообщений бота.
     /// </summary>
-    internal interface ILoggerService
+    public interface ILoggerService
     {
         void Info(string message);
         void Debug(string message);

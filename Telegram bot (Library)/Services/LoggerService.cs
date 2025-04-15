@@ -7,7 +7,7 @@ namespace Telegram_bot__Library_.Services
     /// <summary>
     /// Сервис для логирования сообщений бота в файл.
     /// </summary>
-    internal sealed class LoggerService : ILoggerService
+    public sealed class LoggerService : ILoggerService
     {
         private static readonly string _logDirectory = "Logs";
         private static readonly string _logFilePath = Path.Combine(_logDirectory, "bot_logs.txt");

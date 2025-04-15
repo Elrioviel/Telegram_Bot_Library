@@ -11,7 +11,7 @@ namespace Telegram_bot__Library_.Services
     /// <summary>
     /// Основной сервис Telegram-бота отвечающий за его запуск, остановку и отправку сообщений.
     /// </summary>
-    internal sealed class BotService : IBotService, IHostedService
+    public sealed class BotService : IBotService, IHostedService
     {
         private readonly ITelegramBotClient _botClient;
         private readonly ICommandHandler _commandHandler;
