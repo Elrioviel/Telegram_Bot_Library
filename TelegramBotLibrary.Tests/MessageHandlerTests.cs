@@ -65,7 +65,7 @@ namespace TelegramBotLibrary.Tests
             // Флаг для проверки вызова обработчика команды
             var handlerCalled = false;
             
-            _messageHandler.RegisterCommand(command, (_, _, _) =>
+            _messageHandler.RegisterCommand(command, (_, _) =>
             {
                 handlerCalled = true;
                 return Task.CompletedTask;

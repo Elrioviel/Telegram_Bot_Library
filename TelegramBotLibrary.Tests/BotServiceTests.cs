@@ -112,7 +112,7 @@ namespace TelegramBotLibrary.Tests
         {
             // Arrange
             long chatId = 12345;
-            string photoUrl = "http://example.com/photo.jpg";
+            string photoUrl = "photo.jpg";
             string caption = "Example photo";
 
             // Act

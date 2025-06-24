@@ -1,6 +1,5 @@
 ﻿using Telegram.Bot;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
 using Telegram_bot__Library_.Interfaces;
 
 namespace Telegram_bot__Library_.Services
@@ -9,13 +8,13 @@ namespace Telegram_bot__Library_.Services
     /// Обрабатывает входящие сообщения в Telegram боте.
     /// Поддерживает регистрацию команд и ответов.
     /// </summary>
-    internal sealed class MessageHandler : IMessageHandler
+    public sealed class MessageHandler : IMessageHandler
     {
         private readonly ITelegramBotClient _botClient;
         private readonly ILoggerService _logger;
 
         // Словарь для хранения команд и их обработчиков.
-        private readonly Dictionary<string, Func<long, string, CancellationToken, Task>> _commands = new();
+        private readonly Dictionary<string, Func<Message, CancellationToken, Task>> _commands = new();
 
         // Словарь для хранения ответов и их обработчиков.
         private readonly Dictionary<string, Func<long, Message, string, CancellationToken, Task>> _replies = new();
@@ -36,7 +35,7 @@ namespace Telegram_bot__Library_.Services
         /// </summary>
         /// <param name="command">Название команды.</param>
         /// <param name="handler">Метод-обработчик команды.</param>
-        public void RegisterCommand(string command, Func<long, string, CancellationToken, Task> handler)
+        public void RegisterCommand(string command, Func<Message, CancellationToken, Task> handler)
         {
             _commands[command] = handler;
             _logger.Info($"Registred command: {command}");
@@ -77,40 +76,56 @@ namespace Telegram_bot__Library_.Services
             }
             else
             {
-                await HandleCommandAsync(message.Chat.Id, message.Text, cancellationToken);
+                await HandleCommandAsync(message.Chat.Id, message.Text, message.From?.FirstName, message.From?.LastName, message.From?.Username, cancellationToken);
             }
         }
 
         /// <summary>
         /// Обрабатывает команду от пользователя.
         /// </summary>
-        private async Task HandleCommandAsync(long chatId, string messageText, CancellationToken cancellationToken)
+        public async Task HandleCommandAsync(long chatId, string messageText, string? firstName = null, string? lastName = null, string? username = null, CancellationToken cancellationToken = default)
         {
-            // Берем только саму команду, без аргументов.
-            string command = messageText.Split(' ')[0];
+            if (string.IsNullOrWhiteSpace(messageText))
+                return;
+
+            string command = messageText.Split(' ')[0].ToLowerInvariant();
 
             if (_commands.TryGetValue(command, out var handler))
             {
                 try
                 {
-                    await handler.Invoke(chatId, messageText, cancellationToken);
+                    var message = new Message
+                    {
+                        Chat = new Chat { Id = chatId },
+                        Text = messageText,
+                        From = new User
+                        {
+                            Id = chatId, // Telegram user ID и chat ID часто совпадают в личных чатах
+                            FirstName = firstName ?? "",
+                            LastName = lastName,
+                            Username = username
+                        }
+                    };
+
+                    await handler.Invoke(message, cancellationToken);
                 }
                 catch (Exception exception)
                 {
                     _logger.Error($"Error executing command {command}: {exception}");
-                    await _botClient.SendMessage(chatId, "An error occurred while processing the command.");
+                    await _botClient.SendTextMessageAsync(chatId, "An error occurred while processing the command.", cancellationToken: cancellationToken);
                 }
             }
             else
             {
-                await _botClient.SendMessage(chatId, "Unknown command.", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+                await _botClient.SendTextMessageAsync(chatId, "Unknown command.", cancellationToken: cancellationToken);
             }
         }
+
 
         /// <summary>
         /// Обрабатывает ответ на сообщение бота.
         /// </summary>
-        private async Task HandleReplyAsync(long chatId, Message repliedMessage, string userReply, CancellationToken cancellationToken)
+        public async Task HandleReplyAsync(long chatId, Message repliedMessage, string userReply, CancellationToken cancellationToken)
         {
             _logger.Debug($"Bot was replied to: {repliedMessage.Text}, User response: {userReply}");
 
@@ -120,13 +135,22 @@ namespace Telegram_bot__Library_.Services
                 {
                     await handler.Invoke(chatId, repliedMessage, userReply, cancellationToken);
                 }
-                else if (userReply.StartsWith('/')) // В случае если пользователь ответит на сообщение бота с командой.
+                else if (userReply.StartsWith('/')) // В случае если пользователь ответил на сообщение бота с командой.
                 {
-                    await HandleCommandAsync(chatId, userReply, cancellationToken);
+                    // Попробуем достать инфу о пользователе
+                    var fromUser = repliedMessage?.ReplyToMessage?.From;
+
+                    await HandleCommandAsync(
+                        chatId,
+                        userReply,
+                        fromUser?.FirstName,
+                        fromUser?.LastName,
+                        fromUser?.Username,
+                        cancellationToken);
                 }
                 else
                 {
-                    await _botClient.SendMessage(chatId, $"No handler registred for {userReply}", parseMode: ParseMode.Html, cancellationToken: cancellationToken);
+                    await _botClient.SendTextMessageAsync(chatId, $"No handler registered for {userReply}", cancellationToken: cancellationToken);
                 }
             }
         }

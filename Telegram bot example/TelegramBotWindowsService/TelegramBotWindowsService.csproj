@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
 	<PropertyGroup>
 		<TargetFramework>net9.0</TargetFramework>
@@ -9,6 +9,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+		<PackageReference Include="Telegram.Bot" Version="22.5.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<Reference Include="Telegram bot %28Library%29">

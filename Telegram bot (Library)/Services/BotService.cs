@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram_bot__Library_.Interfaces;
+using Telegram_bot__Library_.Models;
 
 namespace Telegram_bot__Library_.Services
 {
@@ -19,10 +21,24 @@ namespace Telegram_bot__Library_.Services
         private readonly MessageHandler _messageHandler;
         private readonly CallbackHandler _callbackHandler;
 
-        public BotService(string botToken, ILoggerService logger)
+        public IMessageHandler MessageHandler => _messageHandler;
+
+
+        public BotService(IOptions<BotOptions> options, ILoggerService logger)
         {
             _logger = logger;
-            _botClient = new TelegramBotClient(botToken);
+
+            var token = options?.Value?.Token?.Trim();
+
+            if (string.IsNullOrWhiteSpace(token))
+                throw new ArgumentException("Telegram Bot Token is null or empty.");
+
+            var httpClient = new HttpClient
+            {
+                BaseAddress = new Uri("https://api.telegram.org/")
+            };
+
+            _botClient = new TelegramBotClient(token, httpClient);
             _messageHandler = new MessageHandler(_botClient, _logger);
             _callbackHandler = new CallbackHandler(_botClient, _logger);
             _commandHandler = new CommandHandler(_logger, _callbackHandler, _messageHandler);
@@ -56,7 +72,7 @@ namespace Telegram_bot__Library_.Services
         {
             cancellationToken.ThrowIfCancellationRequested();
             _logger.Info("Bot stopped");
-            
+
             return Task.CompletedTask;
         }
 
@@ -82,7 +98,10 @@ namespace Telegram_bot__Library_.Services
         {
             _logger.Info($"Sending photo to chat {chatId}");
 
-            await _botClient.SendPhoto(chatId, photoUrl, caption: caption);
+            await using var stream = File.OpenRead(photoUrl);
+            var inputFile = new InputFileStream(stream, Path.GetFileName(photoUrl));
+
+            await _botClient.SendPhoto(chatId, inputFile, caption: caption);
         }
 
         /// <summary>
@@ -91,12 +110,14 @@ namespace Telegram_bot__Library_.Services
         /// <param name="chatId">ID чата.</param>
         /// <param name="filePath">Путь к файлу.</param>
         /// <param name="caption">Описание файла.</param>
-        public async Task SendDocumentAsync(long chatId, string filePath, string caption = "")
+        public async Task SendDocumentAsync(long chatId, string filePath, string customFileName = "", string caption = "")
         {
             _logger.Info($"Sending document to chat {chatId}");
 
+            var fileName = string.IsNullOrEmpty(customFileName) ? Path.GetFileName(filePath) : customFileName;
+
             await using var fileStream = File.OpenRead(filePath);
-            await _botClient.SendDocument(chatId, new InputFileStream(fileStream, filePath), caption: caption);
+            await _botClient.SendDocument(chatId, new InputFileStream(fileStream, fileName), caption: caption);
         }
 
         /// <summary>

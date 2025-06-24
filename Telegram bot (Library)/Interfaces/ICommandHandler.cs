@@ -6,7 +6,7 @@ namespace Telegram_bot__Library_.Interfaces
     /// <summary>
     /// Интерфейс обработчика команд и обновлений.
     /// </summary>
-    internal interface ICommandHandler
+    public interface ICommandHandler
     {
         Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken);
     }

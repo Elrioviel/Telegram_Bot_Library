@@ -8,7 +8,7 @@ namespace Telegram_bot__Library_.Services
     /// <summary>
     /// Обработчик входящих сообщений и callback-запросов.
     /// </summary>
-    internal sealed class CommandHandler : ICommandHandler
+    public sealed class CommandHandler : ICommandHandler
     {
         private readonly ILoggerService _logger;
         private readonly ICallbackHandler _callbackHandler;
